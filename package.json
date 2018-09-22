@@ -1,0 +1,19 @@
+{
+  "name": "titan",
+  "version": "1.0.0",
+  "description": "TerrainModelling",
+  "private": "true",
+  "dependencies": {
+    "lodash": "^4.17.11",
+    "webpack": "^4.19.0"
+  },
+  "devDependencies": {
+    "webpack-cli": "^3.1.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "webpack --config webpack.config.js"
+  },
+  "author": "Shad Downey <shad.downey@gmail.com>",
+  "license": "ISC"
+}

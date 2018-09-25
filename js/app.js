@@ -3,10 +3,10 @@
 const Map = require('./game/map');
 const $ = require('./thirdParty/jquery-3.3.1.min');
 const Button = require('./elements/button');
-const utils = require('./utils/general');
-const variagator = require('./utils/variagator');
 
 $(() => {
+    //window.DEBUG = true;
+
     const titanBody = document.getElementById('body');
 
     const mainMap = new Map();

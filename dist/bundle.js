@@ -99,10 +99,10 @@
 const Map = __webpack_require__(/*! ./game/map */ "./js/game/map.js");
 const $ = __webpack_require__(/*! ./thirdParty/jquery-3.3.1.min */ "./js/thirdParty/jquery-3.3.1.min.js");
 const Button = __webpack_require__(/*! ./elements/button */ "./js/elements/button.js");
-const utils = __webpack_require__(/*! ./utils/general */ "./js/utils/general.js");
-const variagator = __webpack_require__(/*! ./utils/variagator */ "./js/utils/variagator.js");
 
 $(() => {
+    //window.DEBUG = true;
+
     const titanBody = document.getElementById('body');
 
     const mainMap = new Map();
@@ -267,7 +267,7 @@ module.exports = Canvas;
 
 const Terrain = __webpack_require__(/*! ./terrain */ "./js/game/terrain.js");
 const Circle = __webpack_require__(/*! ../shapes/circle */ "./js/shapes/circle.js");
-const variagator = __webpack_require__(/*! ../utils/variagator */ "./js/utils/variagator.js");
+const Variagator = __webpack_require__(/*! ../utils/variagator */ "./js/utils/variagator.js");
 const utils = __webpack_require__(/*! ../utils/general */ "./js/utils/general.js");
 
 let continentId = 1;
@@ -276,6 +276,7 @@ function Continent(options) {
     Object.assign(this, options || {});
     this.id = continentId++;
     this.type.initialize.call(this);
+    this.variagator = new Variagator(this.variagatorOptions);
 }
 
 Continent.TYPE = {
@@ -308,18 +309,23 @@ Continent.TYPE = {
 };
 
 Continent.prototype = {
+    variagatorOptions: {},
     squiggleFactor: 50,
     terrain: Terrain.EARTH,
     type: Continent.TYPE.POLYGON(12)
 };
 
 Continent.prototype.squiggle = function (points) {
-    let i = 0;
+    let stretchedPoints = points.map((point) => {
+        return this.variagator.slideAgainst(point, {x: 0, y: 0}, 1.5);
+    });
+    points = stretchedPoints;
+    let i;
     let squiggledPoints = [];
     for (i = 0; i < points.length; i++) {
         let pointA = points[i];
         let pointB = points[((i + 1) % points.length)];
-        let squiggled = variagator.squiggle(pointA, pointB, this.squiggleFactor);
+        let squiggled = this.variagator.squiggle(pointA, pointB, this.squiggleFactor);
 
         squiggledPoints = squiggledPoints.concat(squiggled);
     }
@@ -339,9 +345,11 @@ Continent.prototype.drawInto = function (ctx, origin, scale) {
 
     let squiggled = this.squiggle(points);
 
-    // squiggled.forEach((point) => {
-    //     markPoint(point, 5);
-    // });
+    if (window.DEBUG) {
+        squiggled.forEach((point) => {
+            markPoint(point, 5);
+        });
+    }
 
     points = squiggled.map(point => {
         return {
@@ -360,7 +368,9 @@ Continent.prototype.drawInto = function (ctx, origin, scale) {
     ctx.fillStyle = this.terrain.color;
     ctx.fill();
 
-    //originalPoints.forEach((point, i) => markPoint(point, null, i + ''));
+    if (window.DEBUG) {
+        originalPoints.forEach((point, i) => markPoint(point, null, i + ''));
+    }
 
 };
 
@@ -427,14 +437,28 @@ Map.prototype.getElement = function () {
 
 Map.prototype.generateFeatures = function () {
     this.features = [];
-    this.features.push([this.getCanvas().getCenterPoint(), new Continent({
+    let center = this.getCanvas().getCenterPoint();
+    this.features.push([center, new Continent({
         radius: 200,
-        type: Continent.TYPE.POLYGON(10, Math.random())
+        type: Continent.TYPE.POLYGON(15)
+    })]);
+    this.features.push([{ x: center.x + 100, y: center.y - 100 }, new Continent({
+        radius: 200,
+        type: Continent.TYPE.POLYGON(15)
+    })]);
+    this.features.push([{ x: center.x - 100, y: center.y + 100 }, new Continent({
+        radius: 200,
+        type: Continent.TYPE.POLYGON(15)
+    })]);
+    this.features.push([{x: 80, y: 120}, new Continent({
+        radius: 75,
+        terrain: Terrain.DESERT,
+        type: Continent.TYPE.POLYGON(4)
     })]);
     this.features.push([{x: 100, y: 100}, new Continent({
         radius: 75,
         terrain: Terrain.DESERT,
-        type: Continent.TYPE.POLYGON(4, Math.random())
+        type: Continent.TYPE.POLYGON(4, 2)
     })]);
 };
 
@@ -535,8 +559,19 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*! jQuery v3.3.
 "use strict";
 
 
-module.exports = {
-    between : function (x, boundA, boundB) {
+const general = {
+    distance: function (pointA, pointB) {
+        const xDelta = Math.abs(pointA.x - pointB.x);
+        const yDelta = Math.abs(pointA.y - pointB.y);
+        return Math.pow(Math.pow(xDelta, 2) + Math.pow(yDelta, 2) , 0.5);
+    },
+    randBetween: function (n, m) {
+        return (Math.random() * (n - m)) + m;
+    },
+    randAgainst: function (n, rangeCenteredOnN) {
+        return general.randBetween(n - (rangeCenteredOnN / 2), n + (rangeCenteredOnN / 2));
+    },
+    isBetween : function (x, boundA, boundB) {
         if (x >= boundA) {
             return x <= boundB;
         }
@@ -556,6 +591,7 @@ module.exports = {
     }
 };
 
+module.exports = general;
 
 
 /***/ }),
@@ -571,9 +607,30 @@ module.exports = {
 
 
 const variagator = {};
-const { between } = __webpack_require__(/*! ./general */ "./js/utils/general.js");
+const { between, distance, randBetween, randAgainst } = __webpack_require__(/*! ./general */ "./js/utils/general.js");
 
-const maxThetaDelta = 2;//radians
+function Variagator (options) {
+    Object.assign(this, options || {});
+}
+
+Variagator.prototype.thetaRange = 2;//Radians
+
+Variagator.prototype.slideAgainst = function (point, referencePoint, range) {
+    range = range || 1;
+    const xSign = point.x < referencePoint.x ? -1 : 1;
+    const ySign = point.y < referencePoint.y ? -1 : 1;
+    const hypoteneuse = distance(point, referencePoint);
+    const newHypoteneuse = randAgainst(hypoteneuse, range * hypoteneuse);
+    const theta = Math.asin(Math.abs(point.y - referencePoint.y) / hypoteneuse);
+    const newX = Math.cos(theta) * newHypoteneuse;
+    const newY = Math.sin(theta) * newHypoteneuse;
+    const dPoint = {
+        x: referencePoint.x + (newX * xSign),
+        y: referencePoint.y + (newY * ySign)
+    };
+    console.log(`ref:(${referencePoint.x},${referencePoint.y}), oPoint:(${point.x},${point.y}), dPoint:(${dPoint.x},${dPoint.y})`);
+    return dPoint;
+};
 
 /**
  * Result exclusive of pointB
@@ -582,7 +639,7 @@ const maxThetaDelta = 2;//radians
  * @param resultSize
  * @returns {*[]}
  */
-variagator.squiggle = function (pointA, pointB, resultSize) {
+Variagator.prototype.squiggle = function (pointA, pointB, resultSize) {
     resultSize = Math.max(resultSize || 1, 1);
     let result = [pointA];
     let point = pointA;
@@ -603,7 +660,7 @@ variagator.squiggle = function (pointA, pointB, resultSize) {
         let theta = Math.asin(yToTravel / distanceToTravel);
         //console.log('theta: ', theta * 57.2958);
 
-        let deltaTheta = (Math.random() * maxThetaDelta) - (maxThetaDelta / 2);
+        let deltaTheta = (Math.random() * this.thetaRange) - (this.thetaRange / 2);
         //console.log('deltaTheta', deltaTheta * 57.2958);
 
         let newTheta = theta + deltaTheta;
@@ -626,7 +683,8 @@ variagator.squiggle = function (pointA, pointB, resultSize) {
     return result;
 };
 
-module.exports = variagator;
+
+module.exports = Variagator;
 
 
 

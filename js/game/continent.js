@@ -2,7 +2,7 @@
 
 const Terrain = require('./terrain');
 const Circle = require('../shapes/circle');
-const variagator = require('../utils/variagator');
+const Variagator = require('../utils/variagator');
 const utils = require('../utils/general');
 
 let continentId = 1;
@@ -11,6 +11,7 @@ function Continent(options) {
     Object.assign(this, options || {});
     this.id = continentId++;
     this.type.initialize.call(this);
+    this.variagator = new Variagator(this.variagatorOptions);
 }
 
 Continent.TYPE = {
@@ -43,18 +44,23 @@ Continent.TYPE = {
 };
 
 Continent.prototype = {
+    variagatorOptions: {},
     squiggleFactor: 50,
     terrain: Terrain.EARTH,
     type: Continent.TYPE.POLYGON(12)
 };
 
 Continent.prototype.squiggle = function (points) {
-    let i = 0;
+    let stretchedPoints = points.map((point) => {
+        return this.variagator.slideAgainst(point, {x: 0, y: 0}, 1.5);
+    });
+    points = stretchedPoints;
+    let i;
     let squiggledPoints = [];
     for (i = 0; i < points.length; i++) {
         let pointA = points[i];
         let pointB = points[((i + 1) % points.length)];
-        let squiggled = variagator.squiggle(pointA, pointB, this.squiggleFactor);
+        let squiggled = this.variagator.squiggle(pointA, pointB, this.squiggleFactor);
 
         squiggledPoints = squiggledPoints.concat(squiggled);
     }
@@ -74,9 +80,11 @@ Continent.prototype.drawInto = function (ctx, origin, scale) {
 
     let squiggled = this.squiggle(points);
 
-    // squiggled.forEach((point) => {
-    //     markPoint(point, 5);
-    // });
+    if (window.DEBUG) {
+        squiggled.forEach((point) => {
+            markPoint(point, 5);
+        });
+    }
 
     points = squiggled.map(point => {
         return {
@@ -95,7 +103,9 @@ Continent.prototype.drawInto = function (ctx, origin, scale) {
     ctx.fillStyle = this.terrain.color;
     ctx.fill();
 
-    //originalPoints.forEach((point, i) => markPoint(point, null, i + ''));
+    if (window.DEBUG) {
+        originalPoints.forEach((point, i) => markPoint(point, null, i + ''));
+    }
 
 };
 

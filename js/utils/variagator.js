@@ -1,9 +1,30 @@
 'use strict';
 
 const variagator = {};
-const { between } = require('./general');
+const { between, distance, randBetween, randAgainst } = require('./general');
 
-const maxThetaDelta = 2;//radians
+function Variagator (options) {
+    Object.assign(this, options || {});
+}
+
+Variagator.prototype.thetaRange = 2;//Radians
+
+Variagator.prototype.slideAgainst = function (point, referencePoint, range) {
+    range = range || 1;
+    const xSign = point.x < referencePoint.x ? -1 : 1;
+    const ySign = point.y < referencePoint.y ? -1 : 1;
+    const hypoteneuse = distance(point, referencePoint);
+    const newHypoteneuse = randAgainst(hypoteneuse, range * hypoteneuse);
+    const theta = Math.asin(Math.abs(point.y - referencePoint.y) / hypoteneuse);
+    const newX = Math.cos(theta) * newHypoteneuse;
+    const newY = Math.sin(theta) * newHypoteneuse;
+    const dPoint = {
+        x: referencePoint.x + (newX * xSign),
+        y: referencePoint.y + (newY * ySign)
+    };
+    console.log(`ref:(${referencePoint.x},${referencePoint.y}), oPoint:(${point.x},${point.y}), dPoint:(${dPoint.x},${dPoint.y})`);
+    return dPoint;
+};
 
 /**
  * Result exclusive of pointB
@@ -12,7 +33,7 @@ const maxThetaDelta = 2;//radians
  * @param resultSize
  * @returns {*[]}
  */
-variagator.squiggle = function (pointA, pointB, resultSize) {
+Variagator.prototype.squiggle = function (pointA, pointB, resultSize) {
     resultSize = Math.max(resultSize || 1, 1);
     let result = [pointA];
     let point = pointA;
@@ -33,7 +54,7 @@ variagator.squiggle = function (pointA, pointB, resultSize) {
         let theta = Math.asin(yToTravel / distanceToTravel);
         //console.log('theta: ', theta * 57.2958);
 
-        let deltaTheta = (Math.random() * maxThetaDelta) - (maxThetaDelta / 2);
+        let deltaTheta = (Math.random() * this.thetaRange) - (this.thetaRange / 2);
         //console.log('deltaTheta', deltaTheta * 57.2958);
 
         let newTheta = theta + deltaTheta;
@@ -56,5 +77,6 @@ variagator.squiggle = function (pointA, pointB, resultSize) {
     return result;
 };
 
-module.exports = variagator;
+
+module.exports = Variagator;
 

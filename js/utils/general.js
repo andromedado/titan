@@ -1,7 +1,18 @@
 'use strict'
 
-module.exports = {
-    between : function (x, boundA, boundB) {
+const general = {
+    distance: function (pointA, pointB) {
+        const xDelta = Math.abs(pointA.x - pointB.x);
+        const yDelta = Math.abs(pointA.y - pointB.y);
+        return Math.pow(Math.pow(xDelta, 2) + Math.pow(yDelta, 2) , 0.5);
+    },
+    randBetween: function (n, m) {
+        return (Math.random() * (n - m)) + m;
+    },
+    randAgainst: function (n, rangeCenteredOnN) {
+        return general.randBetween(n - (rangeCenteredOnN / 2), n + (rangeCenteredOnN / 2));
+    },
+    isBetween : function (x, boundA, boundB) {
         if (x >= boundA) {
             return x <= boundB;
         }
@@ -21,3 +32,4 @@ module.exports = {
     }
 };
 
+module.exports = general;

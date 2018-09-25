@@ -47,14 +47,28 @@ Map.prototype.getElement = function () {
 
 Map.prototype.generateFeatures = function () {
     this.features = [];
-    this.features.push([this.getCanvas().getCenterPoint(), new Continent({
+    let center = this.getCanvas().getCenterPoint();
+    this.features.push([center, new Continent({
         radius: 200,
-        type: Continent.TYPE.POLYGON(10, Math.random())
+        type: Continent.TYPE.POLYGON(15)
+    })]);
+    this.features.push([{ x: center.x + 100, y: center.y - 100 }, new Continent({
+        radius: 200,
+        type: Continent.TYPE.POLYGON(15)
+    })]);
+    this.features.push([{ x: center.x - 100, y: center.y + 100 }, new Continent({
+        radius: 200,
+        type: Continent.TYPE.POLYGON(15)
+    })]);
+    this.features.push([{x: 80, y: 120}, new Continent({
+        radius: 75,
+        terrain: Terrain.DESERT,
+        type: Continent.TYPE.POLYGON(4)
     })]);
     this.features.push([{x: 100, y: 100}, new Continent({
         radius: 75,
         terrain: Terrain.DESERT,
-        type: Continent.TYPE.POLYGON(4, Math.random())
+        type: Continent.TYPE.POLYGON(4, 2)
     })]);
 };
 
